@@ -51,6 +51,7 @@ const Gallery: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   const [editingImage, setEditingImage] = useState<any>(null);
@@ -103,6 +104,9 @@ const Gallery: React.FC = () => {
       const filesArray = Array.from(e.target.files);
       setSelectedFiles(prev => [...prev, ...filesArray]);
 
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setPreviews(prev => [...prev, ...newPreviews]);
+
       const newTitles = { ...titles };
       filesArray.forEach(f => {
         newTitles[f.name] = f.name.split('.')[0];
@@ -113,6 +117,9 @@ const Gallery: React.FC = () => {
 
   const handleUploadSubmit = async () => {
     if (!selectedFiles.length) return;
+
+    previews.forEach(preview => URL.revokeObjectURL(preview));
+    setPreviews([]);
 
     const formData = new FormData();
     selectedFiles.forEach(file => {
@@ -126,11 +133,27 @@ const Gallery: React.FC = () => {
       });
       setIsUploadOpen(false);
       setSelectedFiles([]);
+      setPreviews([]);
       setTitles({});
       fetchImages();
     } catch (err) {
       console.error('Upload failed', err);
     }
+  };
+
+  const removeFile = (index: number) => {
+    URL.revokeObjectURL(previews[index]);
+    
+    const newPreviews = previews.filter((_, i) => i !== index);
+    setPreviews(newPreviews);
+    
+    const fileToRemove = selectedFiles[index];
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    
+    const newTitles = { ...titles };
+    delete newTitles[fileToRemove.name];
+    setTitles(newTitles);
   };
 
   const openEdit = (image: any) => {
@@ -203,7 +226,13 @@ const Gallery: React.FC = () => {
 
       {/* Upload Modal */}
       {isUploadOpen && (
-        <div className="modal-overlay" onClick={() => setIsUploadOpen(false)}>
+        <div className="modal-overlay" onClick={() => {
+          previews.forEach(preview => URL.revokeObjectURL(preview));
+          setPreviews([]);
+          setSelectedFiles([]);
+          setTitles({});
+          setIsUploadOpen(false);
+        }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h3>Bulk Upload</h3>
@@ -227,31 +256,51 @@ const Gallery: React.FC = () => {
 
             {selectedFiles.length > 0 && (
               <div className="selected-files">
-                <h4 style={{ fontSize: '1rem' }}>Selected Files ({selectedFiles.length})</h4>
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                <h4 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Selected Files ({selectedFiles.length})</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem' }}>
                   {selectedFiles.map((file, i) => (
-                    <div key={i} className="file-item" style={{ marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.name}</span>
-                      <input
-                        type="text"
-                        value={titles[file.name] || ''}
-                        onChange={(e) => setTitles({ ...titles, [file.name]: e.target.value })}
-                        className="form-control"
-                        style={{ padding: '0.4rem', fontSize: '0.875rem' }}
-                        placeholder="Image Title"
+                    <div key={i} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      <img 
+                        src={previews[i]} 
+                        alt={file.name}
+                        style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
                       />
                       <button
-                        className="action-btn delete"
-                        onClick={() => {
-                          setSelectedFiles(selectedFiles.filter(f => f.name !== file.name));
-                          const newTitles = { ...titles };
-                          delete newTitles[file.name];
-                          setTitles(newTitles);
+                        onClick={() => removeFile(i)}
+                        style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          background: 'rgba(0,0,0,0.7)',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '24px',
+                          height: '24px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: 'white',
+                          padding: '0'
                         }}
-                      ><X size={14} /></button>
+                      >
+                        <X size={14} />
+                      </button>
+                      <div style={{ padding: '0.5rem', background: 'var(--card-bg)' }}>
+                        <input
+                          type="text"
+                          value={titles[file.name] || ''}
+                          onChange={(e) => setTitles({ ...titles, [file.name]: e.target.value })}
+                          className="form-control"
+                          style={{ padding: '0.3rem', fontSize: '0.75rem', width: '100%' }}
+                          placeholder="Title"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
+                
                 <button className="btn btn-primary" onClick={handleUploadSubmit} style={{ marginTop: '1rem' }}>
                   <Save size={18} /> Upload All
                 </button>
