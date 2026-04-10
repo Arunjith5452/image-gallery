@@ -18,7 +18,6 @@ export const errorHandler = (
     message = err.message;
   }
 
-  // Log error for development (optional: use a logger like winston)
   console.error(`[Error] ${req.method} ${req.path} - ${message}`);
   if (!(err instanceof AppError)) {
     console.error(err.stack);
@@ -27,6 +26,5 @@ export const errorHandler = (
   res.status(statusCode).json({
     status: 'error',
     message,
-    // stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   });
 };

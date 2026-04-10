@@ -19,7 +19,6 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Setup Axios Interceptor
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -31,7 +30,6 @@ axios.interceptors.request.use(config => {
 const API_URL = 'http://localhost:5000/api/images';
 const UPLOADS_URL = 'http://localhost:5000/uploads';
 
-// Sortable Image Card Component
 const SortableImageCard = ({ image, onEdit, onDelete }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: image._id });
 
@@ -61,11 +59,9 @@ const Gallery: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Upload State
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [titles, setTitles] = useState<Record<string, string>>({});
 
-  // Edit State
   const [editingImage, setEditingImage] = useState<any>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editFile, setEditFile] = useState<File | null>(null);
@@ -98,13 +94,11 @@ const Gallery: React.FC = () => {
 
         const newItems = arrayMove(items, oldIndex, newIndex);
 
-        // Prepare reorder payload
         const reorderPayload = newItems.map((item, index) => ({
           id: item._id,
           order: index
         }));
 
-        // Optimistic update
         axios.put(`${API_URL}/reorder`, { items: reorderPayload })
           .catch(err => console.error('Failed to save order', err));
 
@@ -113,7 +107,6 @@ const Gallery: React.FC = () => {
     }
   };
 
-  // Upload Logic
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
@@ -149,7 +142,6 @@ const Gallery: React.FC = () => {
     }
   };
 
-  // Edit Logic
   const openEdit = (image: any) => {
     setEditingImage(image);
     setEditTitle(image.title);
@@ -177,7 +169,6 @@ const Gallery: React.FC = () => {
     }
   };
 
-  // Delete Logic
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this image?')) {
       try {

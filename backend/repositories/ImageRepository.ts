@@ -23,7 +23,6 @@ export class ImageRepository extends BaseRepository<IImage> implements IImageRep
       },
     }));
 
-    // @ts-ignore - mongoose typings for bulkWrite can be tricky with specific updates
     await this.model.bulkWrite(bulkOps);
   }
 

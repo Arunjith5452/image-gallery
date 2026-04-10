@@ -22,7 +22,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/images', imageRoutes);
 
-// Global Error Handler - must be registered after all routes
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;

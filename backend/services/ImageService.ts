@@ -59,7 +59,6 @@ export class ImageService implements IImageService {
     if (title) updateData.title = title;
 
     if (newFile) {
-      // Remove old file
       const oldPath = path.join(__dirname, '../uploads', image.filename);
       if (fs.existsSync(oldPath)) {
         fs.unlinkSync(oldPath);
@@ -83,7 +82,6 @@ export class ImageService implements IImageService {
       throw new Error('User not authorized');
     }
 
-    // Delete file
     const filePath = path.join(__dirname, '../uploads', image.filename);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
