@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { ToastContainer } from '../components/Toast';
+import PasswordInput from '../components/PasswordInput';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -60,7 +61,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="auth-container">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} confirmDialog={null} closeConfirm={() => {}} />
       <div className="glass-card">
         <h2>Welcome Back</h2>
         <p>Login to your premium image gallery</p>
@@ -78,16 +79,12 @@ const Login: React.FC = () => {
               required
             />
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input 
-              type="password" 
-              className="form-control" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required
-            />
-          </div>
+          <PasswordInput 
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            label="Password"
+            required
+          />
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign In'}
           </button>

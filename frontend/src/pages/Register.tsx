@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { ToastContainer } from '../components/Toast';
+import PasswordInput from '../components/PasswordInput';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -79,7 +80,7 @@ const Register: React.FC = () => {
 
   return (
     <div className="auth-container">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} confirmDialog={null} closeConfirm={() => {}} />
       <div className="glass-card">
         <h2>Create Account</h2>
         <p>Join our premium image gallery</p>
@@ -107,29 +108,21 @@ const Register: React.FC = () => {
               required
             />
           </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input 
-              type="password" 
-              className="form-control" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              required
-              minLength={8}
-              placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
-            />
-          </div>
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input 
-              type="password" 
-              className="form-control" 
-              value={confirmPassword} 
-              onChange={e => setConfirmPassword(e.target.value)} 
-              required
-              minLength={8}
-            />
-          </div>
+          <PasswordInput 
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            label="Password"
+            required
+            minLength={8}
+            placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
+          />
+          <PasswordInput 
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            label="Confirm Password"
+            required
+            minLength={8}
+          />
           <button type="submit" className="btn btn-primary" disabled={loading}>
             {loading ? 'Registering...' : 'Sign Up'}
           </button>

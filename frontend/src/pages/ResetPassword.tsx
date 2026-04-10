@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ToastContainer } from '../components/Toast';
+import PasswordInput from '../components/PasswordInput';
 
 const ResetPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -73,7 +74,7 @@ const ResetPassword: React.FC = () => {
 
   return (
     <div className="auth-container">
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <ToastContainer toasts={toasts} removeToast={removeToast} confirmDialog={null} closeConfirm={() => {}} />
       <div className="glass-card">
         <h2>Reset Password</h2>
         <p>Enter your details to create a new password</p>
@@ -103,29 +104,21 @@ const ResetPassword: React.FC = () => {
                 required
               />
             </div>
-            <div className="form-group">
-              <label>New Password</label>
-              <input 
-                type="password" 
-                className="form-control" 
-                value={newPassword} 
-                onChange={e => setNewPassword(e.target.value)} 
-                required
-                minLength={8}
-                placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
-              />
-            </div>
-            <div className="form-group">
-              <label>Confirm New Password</label>
-              <input 
-                type="password" 
-                className="form-control" 
-                value={confirmPassword} 
-                onChange={e => setConfirmPassword(e.target.value)} 
-                required
-                minLength={8}
-              />
-            </div>
+            <PasswordInput 
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              label="New Password"
+              required
+              minLength={8}
+              placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number"
+            />
+            <PasswordInput 
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              label="Confirm New Password"
+              required
+              minLength={8}
+            />
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? 'Resetting...' : 'Reset Password'}
             </button>
