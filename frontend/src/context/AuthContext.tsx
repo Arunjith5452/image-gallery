@@ -6,6 +6,7 @@ interface AuthContextType {
   login: (userData: any, token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isLoading: boolean;
 }
 
 interface JwtPayload {
@@ -20,19 +21,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
-    
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-      setToken(storedToken);
-      checkTokenValidity(storedToken);
-    }
-  }, []);
-
-  const checkTokenValidity = (tokenToCheck: string) => {
+  const checkTokenValidity = (tokenToCheck: string): boolean => {
     try {
       const base64Url = tokenToCheck.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -42,31 +33,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (decoded.exp < currentTime) {
         console.log('Token expired, logging out');
-        logout();
-      } else {
-        setIsAuthenticated(true);
+        return false;
       }
+      return true;
     } catch (error) {
       console.error('Invalid token:', error);
-      logout();
+      return false;
     }
   };
 
   useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
+      const isValid = checkTokenValidity(storedToken);
+      
+      if (isValid) {
+        setUser(JSON.parse(storedUser));
+        setToken(storedToken);
+        setIsAuthenticated(true);
+      } else {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
     if (!token) return;
 
-    const interval = setInterval(() => checkTokenValidity(token), 60 * 1000);
+    const interval = setInterval(() => {
+      const isValid = checkTokenValidity(token);
+      if (!isValid) {
+        logout();
+      }
+    }, 60 * 1000);
     
     return () => clearInterval(interval);
   }, [token]);
 
   const login = (userData: any, userToken: string) => {
+    const isValid = checkTokenValidity(userToken);
+    
+    if (!isValid) {
+      console.error('Invalid token provided');
+      return;
+    }
+
     setUser(userData);
     setToken(userToken);
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', userToken);
-    checkTokenValidity(userToken);
   };
 
   const logout = () => {
@@ -78,8 +99,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated }}>
-      {children}
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, isLoading }}>
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
