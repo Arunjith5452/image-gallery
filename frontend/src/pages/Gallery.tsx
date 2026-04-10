@@ -52,8 +52,7 @@ const Gallery: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
 
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Array<{file: File, preview: string}>>([]);
   const [titles, setTitles] = useState<Record<string, string>>({});
 
   const [editingImage, setEditingImage] = useState<any>(null);
@@ -113,10 +112,13 @@ const Gallery: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
-      setSelectedFiles(prev => [...prev, ...filesArray]);
-
-      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
-      setPreviews(prev => [...prev, ...newPreviews]);
+      
+      const newFilesWithPreviews = filesArray.map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }));
+      
+      setSelectedFiles(prev => [...prev, ...newFilesWithPreviews]);
 
       const newTitles = { ...titles };
       filesArray.forEach(f => {
@@ -129,12 +131,11 @@ const Gallery: React.FC = () => {
   const handleUploadSubmit = async () => {
     if (!selectedFiles.length) return;
 
-    previews.forEach(preview => URL.revokeObjectURL(preview));
-    setPreviews([]);
+    selectedFiles.forEach(item => URL.revokeObjectURL(item.preview));
 
     const formData = new FormData();
-    selectedFiles.forEach(file => {
-      formData.append('images', file);
+    selectedFiles.forEach(item => {
+      formData.append('images', item.file);
     });
     formData.append('titles', JSON.stringify(titles));
 
@@ -146,7 +147,6 @@ const Gallery: React.FC = () => {
       setImages(prev => [...prev, ...data]);
       setIsUploadOpen(false);
       setSelectedFiles([]);
-      setPreviews([]);
       setTitles({});
       addToast(`${data.length} image${data.length > 1 ? 's' : ''} uploaded successfully!`, 'success');
     } catch (err: any) {
@@ -156,12 +156,9 @@ const Gallery: React.FC = () => {
   };
 
   const removeFile = (index: number) => {
-    URL.revokeObjectURL(previews[index]);
+    URL.revokeObjectURL(selectedFiles[index].preview);
     
-    const newPreviews = previews.filter((_, i) => i !== index);
-    setPreviews(newPreviews);
-    
-    const fileToRemove = selectedFiles[index];
+    const fileToRemove = selectedFiles[index].file;
     const newFiles = selectedFiles.filter((_, i) => i !== index);
     setSelectedFiles(newFiles);
     
@@ -250,8 +247,7 @@ const Gallery: React.FC = () => {
       {/* Upload Modal */}
       {isUploadOpen && (
         <div className="modal-overlay" onClick={() => {
-          previews.forEach(preview => URL.revokeObjectURL(preview));
-          setPreviews([]);
+          selectedFiles.forEach(item => URL.revokeObjectURL(item.preview));
           setSelectedFiles([]);
           setTitles({});
           setIsUploadOpen(false);
@@ -282,11 +278,11 @@ const Gallery: React.FC = () => {
                 <h4 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Selected Files ({selectedFiles.length})</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem', maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem' }}>
-                  {selectedFiles.map((file, i) => (
+                  {selectedFiles.map((item, i) => (
                     <div key={i} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <img 
-                        src={previews[i]} 
-                        alt={file.name}
+                        src={item.preview} 
+                        alt={item.file.name}
                         style={{ width: '100%', height: '120px', objectFit: 'cover', display: 'block' }}
                       />
                       <button
@@ -313,8 +309,8 @@ const Gallery: React.FC = () => {
                       <div style={{ padding: '0.5rem', background: 'var(--card-bg)' }}>
                         <input
                           type="text"
-                          value={titles[file.name] || ''}
-                          onChange={(e) => setTitles({ ...titles, [file.name]: e.target.value })}
+                          value={titles[item.file.name] || ''}
+                          onChange={(e) => setTitles({ ...titles, [item.file.name]: e.target.value })}
                           className="form-control"
                           style={{ padding: '0.3rem', fontSize: '0.75rem', width: '100%' }}
                           placeholder="Title"
