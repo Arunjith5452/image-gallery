@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { ToastContainer } from '../components/Toast';
 
 const Register: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,8 +11,18 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const validateForm = (): string | null => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -51,12 +62,16 @@ const Register: React.FC = () => {
       setError('');
       if (data.token) {
         login(data, data.token);
-        navigate('/');
+        addToast('Registration successful! Welcome to ImageGallery.', 'success');
+        setTimeout(() => navigate('/'), 500);
       } else {
-        navigate('/login');
+        addToast('Registration successful! Please check your email.', 'success');
+        setTimeout(() => navigate('/login'), 1500);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to register');
+      const errorMsg = err.response?.data?.message || 'Failed to register';
+      setError(errorMsg);
+      addToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -64,6 +79,7 @@ const Register: React.FC = () => {
 
   return (
     <div className="auth-container">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="glass-card">
         <h2>Create Account</h2>
         <p>Join our premium image gallery</p>

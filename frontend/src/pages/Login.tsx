@@ -2,14 +2,25 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { ToastContainer } from '../components/Toast';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const validateForm = (): string | null => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -36,9 +47,12 @@ const Login: React.FC = () => {
     try {
       const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
       login(data, data.token);
-      navigate('/');
+      addToast('Login successful! Welcome back.', 'success');
+      setTimeout(() => navigate('/'), 500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to login');
+      const errorMsg = err.response?.data?.message || 'Failed to login';
+      setError(errorMsg);
+      addToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -46,6 +60,7 @@ const Login: React.FC = () => {
 
   return (
     <div className="auth-container">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="glass-card">
         <h2>Welcome Back</h2>
         <p>Login to your premium image gallery</p>

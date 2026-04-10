@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { ToastContainer } from '../components/Toast';
 
 const ResetPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +11,17 @@ const ResetPassword: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
   const navigate = useNavigate();
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   const validateForm = (): string | null => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,9 +60,12 @@ const ResetPassword: React.FC = () => {
       await axios.post('http://localhost:5000/api/auth/reset-password', { email, phone, newPassword });
       setSuccess(true);
       setError('');
+      addToast('Password reset successful! Redirecting to login...', 'success');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to reset password');
+      const errorMsg = err.response?.data?.message || 'Failed to reset password';
+      setError(errorMsg);
+      addToast(errorMsg, 'error');
     } finally {
       setLoading(false);
     }
@@ -59,6 +73,7 @@ const ResetPassword: React.FC = () => {
 
   return (
     <div className="auth-container">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="glass-card">
         <h2>Reset Password</h2>
         <p>Enter your details to create a new password</p>

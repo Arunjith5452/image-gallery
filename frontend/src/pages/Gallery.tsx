@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../lib/axios';
 import { Pencil, Trash2, Upload, X, Save } from 'lucide-react';
+import { ToastContainer } from '../components/Toast';
 import {
   DndContext,
   closestCenter,
@@ -49,6 +50,7 @@ const Gallery: React.FC = () => {
   const [images, setImages] = useState<any[]>([]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [toasts, setToasts] = useState<Array<{id: string, message: string, type: 'success' | 'error' | 'info'}>>([]);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -62,6 +64,15 @@ const Gallery: React.FC = () => {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   useEffect(() => {
     fetchImages();
@@ -137,9 +148,10 @@ const Gallery: React.FC = () => {
       setSelectedFiles([]);
       setPreviews([]);
       setTitles({});
+      addToast(`${data.length} image${data.length > 1 ? 's' : ''} uploaded successfully!`, 'success');
     } catch (err: any) {
       console.error('Upload failed', err);
-      alert(err.response?.data?.message || 'Upload failed. Please try again.');
+      addToast(err.response?.data?.message || 'Upload failed. Please try again.', 'error');
     }
   };
 
@@ -184,9 +196,10 @@ const Gallery: React.FC = () => {
       setEditingImage(null);
       setEditTitle('');
       setEditFile(null);
+      addToast('Image updated successfully!', 'success');
     } catch (err: any) {
       console.error('Edit failed', err);
-      alert(err.response?.data?.message || 'Edit failed. Please try again.');
+      addToast(err.response?.data?.message || 'Edit failed. Please try again.', 'error');
     }
   };
 
@@ -195,15 +208,17 @@ const Gallery: React.FC = () => {
       try {
         await api.delete(`${API_URL}/${id}`);
         setImages(prev => prev.filter(img => img._id !== id));
+        addToast('Image deleted successfully!', 'success');
       } catch (err: any) {
         console.error('Delete failed', err);
-        alert(err.response?.data?.message || 'Delete failed. Please try again.');
+        addToast(err.response?.data?.message || 'Delete failed. Please try again.', 'error');
       }
     }
   };
 
   return (
     <div className="gallery-container">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <div className="gallery-header">
         <h2>My Gallery</h2>
         <button className="btn btn-primary" style={{ width: 'auto' }} onClick={() => setIsUploadOpen(true)}>
