@@ -7,8 +7,8 @@ import ResetPassword from './pages/ResetPassword';
 import Gallery from './pages/Gallery';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { token } = useAuth();
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const Navbar: React.FC = () => {

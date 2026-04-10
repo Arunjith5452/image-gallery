@@ -1,31 +1,47 @@
 import multer from 'multer';
-import fs from 'fs';
-import path from 'path';
 import { Request } from 'express';
+import { AppError } from '../utils/AppError';
+import { HttpStatus } from '../constants/HttpStatus';
 
-const storage = multer.diskStorage({
-  destination: (req: Request, file: Express.Multer.File, cb) => {
-    const uploadPath = path.join(__dirname, '../uploads');
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req: Request, file: Express.Multer.File, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
+const storage = multer.memoryStorage();
+
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'image/bmp',
+];
+
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
 
 const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Not an image! Please upload only images.'));
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    cb(new AppError(
+      `Invalid file type: ${file.mimetype}. Only images are allowed (JPEG, PNG, GIF, WebP, SVG, BMP).`,
+      HttpStatus.BAD_REQUEST
+    ));
+    return;
   }
+
+  const ext = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
+  if (!ALLOWED_EXTENSIONS.includes(ext)) {
+    cb(new AppError(
+      `Invalid file extension: ${ext}. Only image files are allowed (JPEG, PNG, GIF, WebP, SVG, BMP).`,
+      HttpStatus.BAD_REQUEST
+    ));
+    return;
+  }
+
+  cb(null, true);
 };
 
 export const upload = multer({ 
   storage, 
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+  limits: { 
+    fileSize: 5 * 1024 * 1024
+  }
 });
