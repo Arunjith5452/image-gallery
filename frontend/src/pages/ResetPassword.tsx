@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import { ToastContainer } from '../components/Toast';
 import PasswordInput from '../components/PasswordInput';
 
@@ -58,7 +58,7 @@ const ResetPassword: React.FC = () => {
     
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/auth/reset-password', { email, phone, newPassword });
+      await api.post('/auth/reset-password', { email, phone, newPassword });
       setSuccess(true);
       setError('');
       addToast('Password reset successful! Redirecting to login...', 'success');

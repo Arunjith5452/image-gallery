@@ -20,7 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-const API_URL = 'http://localhost:5000/api/images';
+const API_URL = '/images';
 
 const SortableImageCard = ({ image, onEdit, onDelete }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: image._id });
