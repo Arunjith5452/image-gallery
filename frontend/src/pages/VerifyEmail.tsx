@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const VerifyEmail: React.FC = () => {
@@ -12,7 +12,7 @@ const VerifyEmail: React.FC = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        const { data } = await axios.get(`http://localhost:5000/api/auth/verify-email/${token}`);
+        const { data } = await api.get(`/auth/verify-email/${token}`);
         setStatus('success');
         setMessage(data.message);
         setTimeout(() => navigate('/login'), 3000);

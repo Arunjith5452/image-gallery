@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import { ToastContainer } from '../components/Toast';
 import PasswordInput from '../components/PasswordInput';
 
@@ -57,7 +57,7 @@ const Register: React.FC = () => {
     
     setLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/auth/register', { email, phone, password });
+      await api.post('/auth/register', { email, phone, password });
       setError('');
       addToast('Registration successful! Please verify your email before logging in.', 'success');
       setTimeout(() => navigate('/login'), 1500);

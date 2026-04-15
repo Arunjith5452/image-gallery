@@ -27,7 +27,12 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/image-gallery';
 
-mongoose.connect(MONGO_URI)
+console.log(`Starting server in ${process.env.NODE_ENV || 'development'} mode`);
+console.log(`Preparing to connect to MongoDB and bind port ${PORT}`);
+
+mongoose.connect(MONGO_URI, {
+  serverSelectionTimeoutMS: 15000,
+})
   .then(() => {
     console.log('Connected to MongoDB');
     app.listen(PORT, () => {

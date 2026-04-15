@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../lib/axios';
 import { useAuth } from '../context/AuthContext';
 import { ToastContainer } from '../components/Toast';
 import PasswordInput from '../components/PasswordInput';
@@ -46,7 +46,7 @@ const Login: React.FC = () => {
     
     setLoading(true);
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const { data } = await api.post('/auth/login', { email, password });
       login(data, data.token);
       addToast('Login successful! Welcome back.', 'success');
       setTimeout(() => navigate('/'), 500);
