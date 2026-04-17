@@ -9,7 +9,7 @@ const router = express.Router();
 
 const imageController = container.get<ImageController>(TYPES.ImageController);
 
-router.use(protect); // All image routes protected
+router.use(protect); 
 
 router.route('/')
   .get(imageController.getImages);

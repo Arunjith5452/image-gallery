@@ -1,96 +1,108 @@
 import { injectable, inject } from 'inversify';
 import { TYPES } from '../types';
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { IImageService } from '../services/interfaces/IImageService';
 import { HttpStatus } from '../constants/HttpStatus';
-import { AppError } from '../utils/AppError';
 import { AuthRequest } from '../middleware/auth';
+import { IMAGE_MESSAGES } from '../constants/messages';
 
 @injectable()
 export class ImageController {
-  private imageService: IImageService;
+  private _imageService: IImageService;
 
   constructor(@(inject(TYPES.IImageService) as ParameterDecorator) imageService: IImageService) {
-    this.imageService = imageService;
+    this._imageService = imageService;
   }
 
+  /**
+   * Retrieves all images for the authenticated user.
+   * @param req - AuthRequest containing user info.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   getImages = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const images = await this.imageService.getImages(req.user?.id as string);
-      res.status(HttpStatus.OK).json(images);
-    } catch (error: any) {
+      const userImages = await this._imageService.getImages(req.user?.id as string);
+      res.status(HttpStatus.OK).json(userImages);
+    } catch (error) {
       next(error);
     }
   };
 
+  /**
+   * Uploads one or more images.
+   * @param req - AuthRequest containing files and user info.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   uploadImages = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      let titlesMap: Record<string, string> = {};
+      let imageTitlesMap: Record<string, string> = {};
       if (req.body.titles) {
         try {
-          titlesMap = JSON.parse(req.body.titles);
-        } catch (e) {
-          console.error("Could not parse titles", e);
+          imageTitlesMap = JSON.parse(req.body.titles);
+        } catch (parseError) {
+          console.error("Could not parse image titles", parseError);
         }
       }
 
-      const files = req.files as Express.Multer.File[];
-      const createdImages = await this.imageService.uploadImages(files, titlesMap, req.user?.id as string);
-      res.status(HttpStatus.CREATED).json(createdImages);
-    } catch (error: any) {
-      if (error.message === 'No images provided') {
-         next(new AppError(error.message, HttpStatus.BAD_REQUEST));
-      } else {
-         next(error);
-      }
+      const uploadFiles = req.files as Express.Multer.File[];
+      const customCreatedImages = await this._imageService.uploadImages(uploadFiles, imageTitlesMap, req.user?.id as string);
+      res.status(HttpStatus.CREATED).json(customCreatedImages);
+    } catch (error) {
+      next(error);
     }
   };
 
+  /**
+   * Updates an existing image.
+   * @param req - AuthRequest containing image ID, title, file, and user info.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   updateImage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const updatedImage = await this.imageService.updateImage(
+      const updatedImageDoc = await this._imageService.updateImage(
         req.params.id as string,
         req.user?.id as string,
         req.body.title,
         req.file
       );
-      res.status(HttpStatus.OK).json(updatedImage);
-    } catch (error: any) {
-      if (error.message === 'Image not found') {
-        next(new AppError(error.message, HttpStatus.NOT_FOUND));
-      } else if (error.message === 'User not authorized') {
-        next(new AppError(error.message, HttpStatus.UNAUTHORIZED));
-      } else {
-        next(error);
-      }
+      res.status(HttpStatus.OK).json(updatedImageDoc);
+    } catch (error) {
+      next(error);
     }
   };
 
+  /**
+   * Deletes an image.
+   * @param req - AuthRequest containing image ID and user info.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   deleteImage = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await this.imageService.deleteImage(req.params.id as string, req.user?.id as string);
-      res.status(HttpStatus.OK).json({ id: req.params.id });
-    } catch (error: any) {
-      if (error.message === 'Image not found') {
-        next(new AppError(error.message, HttpStatus.NOT_FOUND));
-      } else if (error.message === 'User not authorized') {
-        next(new AppError(error.message, HttpStatus.UNAUTHORIZED));
-      } else {
-        next(error);
-      }
+      const imageToDeleteId = req.params.id as string;
+      await this._imageService.deleteImage(imageToDeleteId, req.user?.id as string);
+      res.status(HttpStatus.OK).json({ id: imageToDeleteId });
+    } catch (error) {
+      next(error);
     }
   };
 
+  /**
+   * Reorders multiple images.
+   * @param req - AuthRequest containing reorder items and user info.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   reorderImages = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      await this.imageService.reorderImages(req.body.items, req.user?.id as string);
-      res.status(HttpStatus.OK).json({ message: 'Images reordered successfully' });
-    } catch (error: any) {
-      if (error.message === 'No items provided for reordering') {
-         next(new AppError(error.message, HttpStatus.BAD_REQUEST));
-      } else {
-         next(error);
-      }
+      const reorderPayload = req.body.items;
+      await this._imageService.reorderImages(reorderPayload, req.user?.id as string);
+      res.status(HttpStatus.OK).json({ message: IMAGE_MESSAGES.REORDER_SUCCESS });
+    } catch (error) {
+      next(error);
     }
   };
 }

@@ -7,29 +7,31 @@ import { IImage } from '../models/Image';
 import { UpdateQuery } from 'mongoose';
 import { cloudinary } from '../config/cloudinary';
 import { UploadApiResponse } from 'cloudinary';
+import { IMAGE_MESSAGES, AUTH_MESSAGES } from '../constants/messages';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errorClasses';
 
 @injectable()
 export class ImageService implements IImageService {
-  private imageRepository: IImageRepository;
+  private _imageRepository: IImageRepository;
 
   constructor(@(inject(TYPES.IImageRepository) as ParameterDecorator) imageRepository: IImageRepository) {
-    this.imageRepository = imageRepository;
+    this._imageRepository = imageRepository;
   }
 
   async getImages(userId: string): Promise<IImage[]> {
-    return this.imageRepository.findUserImages(userId);
+    return this._imageRepository.findUserImages(userId);
   }
 
-  async uploadImages(files: Express.Multer.File[], titlesMap: Record<string, string>, userId: string): Promise<IImage[]> {
-    if (!files || files.length === 0) {
-      throw new Error('No images provided');
+  async uploadImages(uploadFiles: Express.Multer.File[], titlesMap: Record<string, string>, userId: string): Promise<IImage[]> {
+    if (!uploadFiles || uploadFiles.length === 0) {
+      throw new BadRequestError(IMAGE_MESSAGES.NO_IMAGES);
     }
 
-    let currentOrder = await this.imageRepository.findHighestOrderForUser(userId);
+    let currentOrder = await this._imageRepository.findHighestOrderForUser(userId);
     currentOrder = currentOrder !== -1 ? currentOrder + 1 : 0;
 
-    const uploadPromises = files.map(async (file) => {
-      const result: UploadApiResponse = await new Promise((resolve, reject) => {
+    const uploadPromises = uploadFiles.map(async (file) => {
+      const uploadResult: UploadApiResponse = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: 'image-gallery',
@@ -46,41 +48,41 @@ export class ImageService implements IImageService {
 
       return {
         title: titlesMap[file.originalname] || file.originalname.split('.')[0],
-        cloudinaryPublicId: result.public_id,
-        imageUrl: result.secure_url,
+        cloudinaryPublicId: uploadResult.public_id,
+        imageUrl: uploadResult.secure_url,
         mimetype: file.mimetype,
         order: currentOrder++,
         user: new mongoose.Types.ObjectId(userId),
       };
     });
 
-    const imageDocs = await Promise.all(uploadPromises);
-    const createdImages = await this.imageRepository.bulkCreate(imageDocs);
+    const imageMetadataList = await Promise.all(uploadPromises);
+    const createdImages = await this._imageRepository.bulkCreate(imageMetadataList);
     return createdImages;
   }
 
-  async updateImage(id: string, userId: string, title?: string, newFile?: Express.Multer.File): Promise<IImage | null> {
-    const image = await this.imageRepository.findById(id);
+  async updateImage(imageId: string, userId: string, newTitle?: string, newFile?: Express.Multer.File): Promise<IImage | null> {
+    const existingImage = await this._imageRepository.findById(imageId);
 
-    if (!image) {
-      throw new Error('Image not found');
+    if (!existingImage) {
+      throw new NotFoundError(IMAGE_MESSAGES.IMAGE_NOT_FOUND);
     }
 
-    if (image.user.toString() !== userId) {
-      throw new Error('User not authorized');
+    if (existingImage.user.toString() !== userId) {
+      throw new UnauthorizedError(AUTH_MESSAGES.UNAUTHORIZED);
     }
 
-    const updateData: UpdateQuery<IImage> = {};
-    if (title) updateData.title = title;
+    const updatePayload: UpdateQuery<IImage> = {};
+    if (newTitle) updatePayload.title = newTitle;
 
     if (newFile) {
-      await cloudinary.uploader.destroy(image.cloudinaryPublicId);
+      await cloudinary.uploader.destroy(existingImage.cloudinaryPublicId);
 
-      const result: UploadApiResponse = await new Promise((resolve, reject) => {
+      const uploadResult: UploadApiResponse = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
             folder: 'image-gallery',
-            public_id: image.cloudinaryPublicId,
+            public_id: existingImage.cloudinaryPublicId,
             resource_type: 'image',
           },
           (error, result) => {
@@ -91,37 +93,37 @@ export class ImageService implements IImageService {
         uploadStream.end(newFile.buffer);
       });
 
-      updateData.cloudinaryPublicId = result.public_id;
-      updateData.imageUrl = result.secure_url;
-      updateData.mimetype = newFile.mimetype;
+      updatePayload.cloudinaryPublicId = uploadResult.public_id;
+      updatePayload.imageUrl = uploadResult.secure_url;
+      updatePayload.mimetype = newFile.mimetype;
     }
 
-    const updatedImage = await this.imageRepository.updateById(id, updateData);
+    const updatedImage = await this._imageRepository.updateById(imageId, updatePayload);
     return updatedImage;
   }
 
-  async deleteImage(id: string, userId: string): Promise<void> {
-    const image = await this.imageRepository.findById(id);
+  async deleteImage(imageId: string, userId: string): Promise<void> {
+    const existingImage = await this._imageRepository.findById(imageId);
 
-    if (!image) {
-      throw new Error('Image not found');
+    if (!existingImage) {
+      throw new NotFoundError(IMAGE_MESSAGES.IMAGE_NOT_FOUND);
     }
 
-    if (image.user.toString() !== userId) {
-      throw new Error('User not authorized');
+    if (existingImage.user.toString() !== userId) {
+      throw new UnauthorizedError(AUTH_MESSAGES.UNAUTHORIZED);
     }
 
-    await cloudinary.uploader.destroy(image.cloudinaryPublicId);
+    await cloudinary.uploader.destroy(existingImage.cloudinaryPublicId);
 
-    await this.imageRepository.deleteById(id);
+    await this._imageRepository.deleteById(imageId);
   }
 
-  async reorderImages(items: { id: string; order: number }[], userId: string): Promise<void> {
-    if (!items || !items.length) {
-      throw new Error('No items provided for reordering');
+  async reorderImages(reorderItems: { id: string; order: number }[], userId: string): Promise<void> {
+    if (!reorderItems || !reorderItems.length) {
+      throw new BadRequestError(IMAGE_MESSAGES.NO_ITEMS_REORDER);
     }
 
-    const itemsWithUserId = items.map(item => ({ ...item, userId }));
-    await this.imageRepository.bulkUpdateOrder(itemsWithUserId);
+    const itemsWithUserContext = reorderItems.map(item => ({ ...item, userId }));
+    await this._imageRepository.bulkUpdateOrder(itemsWithUserContext);
   }
 }
