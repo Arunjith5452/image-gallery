@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../lib/axios';
+import { imageService } from '../services/image.service';
 import { Pencil, Trash2, Upload, X, Save } from 'lucide-react';
 import { ToastContainer } from '../components/Toast';
 import {
@@ -19,8 +19,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-const API_URL = '/images';
 
 const SortableImageCard = ({ image, onEdit, onDelete }: any) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: image._id });
@@ -93,8 +91,8 @@ const Gallery: React.FC = () => {
 
   const fetchImages = async () => {
     try {
-      const { data } = await api.get(API_URL);
-      setImages(data);
+      const userImages = await imageService.getImages();
+      setImages(userImages);
     } catch (err) {
       console.error('Failed to fetch images', err);
     }
@@ -115,7 +113,7 @@ const Gallery: React.FC = () => {
           order: index
         }));
 
-        api.put(`${API_URL}/reorder`, { items: reorderPayload })
+        imageService.reorderImages(reorderPayload)
           .catch(err => console.error('Failed to save order', err));
 
         return newItems;
@@ -147,20 +145,20 @@ const Gallery: React.FC = () => {
 
     selectedFiles.forEach(item => URL.revokeObjectURL(item.preview));
 
-    const formData = new FormData();
+    const uploadFormData = new FormData();
     selectedFiles.forEach(item => {
-      formData.append('images', item.file);
+      uploadFormData.append('images', item.file);
     });
-    formData.append('titles', JSON.stringify(titles));
+    uploadFormData.append('titles', JSON.stringify(titles));
 
     try {
-      const { data } = await api.post(`${API_URL}/bulk`, formData);
+      const uploadResponseData = await imageService.uploadImages(uploadFormData);
       
-      setImages(prev => [...prev, ...data]);
+      setImages(prev => [...prev, ...uploadResponseData]);
       setIsUploadOpen(false);
       setSelectedFiles([]);
       setTitles({});
-      addToast(`${data.length} image${data.length > 1 ? 's' : ''} uploaded successfully!`, 'success');
+      addToast(`${uploadResponseData.length} image${uploadResponseData.length > 1 ? 's' : ''} uploaded successfully!`, 'success');
     } catch (err: any) {
       console.error('Upload failed', err);
       addToast(err.response?.data?.message || 'Upload failed. Please try again.', 'error');
@@ -171,17 +169,17 @@ const Gallery: React.FC = () => {
     URL.revokeObjectURL(selectedFiles[index].preview);
     
     const fileToRemove = selectedFiles[index].file;
-    const newFiles = selectedFiles.filter((_, i) => i !== index);
-    setSelectedFiles(newFiles);
+    const newFilesList = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFilesList);
     
-    const newTitles = { ...titles };
-    delete newTitles[fileToRemove.name];
-    setTitles(newTitles);
+    const updatedTitles = { ...titles };
+    delete updatedTitles[fileToRemove.name];
+    setTitles(updatedTitles);
   };
 
-  const openEdit = (image: any) => {
-    setEditingImage(image);
-    setEditTitle(image.title);
+  const openEdit = (imageRecord: any) => {
+    setEditingImage(imageRecord);
+    setEditTitle(imageRecord.title);
     setEditFile(null);
     setIsEditOpen(true);
   };
@@ -189,16 +187,16 @@ const Gallery: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingImage) return;
 
-    const formData = new FormData();
-    formData.append('title', editTitle);
+    const editFormData = new FormData();
+    editFormData.append('title', editTitle);
     if (editFile) {
-      formData.append('image', editFile);
+      editFormData.append('image', editFile);
     }
 
     try {
-      const { data } = await api.put(`${API_URL}/${editingImage._id}`, formData);
+      const updatedImageResult = await imageService.updateImage(editingImage._id, editFormData);
       
-      setImages(prev => prev.map(img => img._id === editingImage._id ? data : img));
+      setImages(prev => prev.map(img => img._id === editingImage._id ? updatedImageResult : img));
       setIsEditOpen(false);
       setEditingImage(null);
       setEditTitle('');
@@ -210,13 +208,13 @@ const Gallery: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (imageId: string) => {
     showConfirm(
       'Are you sure you want to delete this image? This action cannot be undone.',
       async () => {
         try {
-          await api.delete(`${API_URL}/${id}`);
-          setImages(prev => prev.filter(img => img._id !== id));
+          await imageService.deleteImage(imageId);
+          setImages(prev => prev.filter(img => img._id !== imageId));
           addToast('Image deleted successfully!', 'success');
         } catch (err: any) {
           console.error('Delete failed', err);
