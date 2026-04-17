@@ -3,91 +3,107 @@ import { TYPES } from '../types';
 import { Request, Response, NextFunction } from 'express';
 import { IAuthService } from '../services/interfaces/IAuthService';
 import { HttpStatus } from '../constants/HttpStatus';
-import { AppError } from '../utils/AppError';
 
 @injectable()
+
 export class AuthController {
-  private authService: IAuthService;
+  private _authService: IAuthService;
 
   constructor(@(inject(TYPES.IAuthService) as ParameterDecorator) authService: IAuthService) {
-    this.authService = authService;
+    this._authService = authService;
   }
 
+  /**
+   * Registers a new user.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   registerUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = await this.authService.register(req.body);
-      res.status(HttpStatus.CREATED).json(data);
-    } catch (error: any) {
-      if (['Please add all fields', 'User already exists', 'Invalid user data'].includes(error.message)) {
-        next(new AppError(error.message, HttpStatus.BAD_REQUEST));
-      } else {
-        next(error);
-      }
-    }
-  };
-
-  loginUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const data = await this.authService.login(req.body);
-      res.status(HttpStatus.OK).json(data);
-    } catch (error: any) {
-      if (error.message === 'Invalid credentials') {
-        next(new AppError(error.message, HttpStatus.UNAUTHORIZED));
-      } else {
-        next(error);
-      }
-    }
-  };
-
-  resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const data = await this.authService.resetPassword(req.body);
-      res.status(HttpStatus.OK).json(data);
-    } catch (error: any) {
-      if (error.message === 'User not found or phone mismatch') {
-        next(new AppError(error.message, HttpStatus.NOT_FOUND));
-      } else {
-        next(error);
-      }
-    }
-  };
-
-  verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const token = String(req.params.token);
-      const data = await this.authService.verifyEmail(token);
-      res.status(HttpStatus.OK).json(data);
-    } catch (error: any) {
-      if (error.message === 'Invalid or expired verification token') {
-        next(new AppError(error.message, HttpStatus.BAD_REQUEST));
-      } else {
-        next(error);
-      }
-    }
-  };
-
-  forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { email } = req.body;
-      const data = await this.authService.forgotPassword(email);
-      res.status(HttpStatus.OK).json(data);
-    } catch (error: any) {
+      const authResult = await this._authService.register(req.body);
+      res.status(HttpStatus.CREATED).json(authResult);
+    } catch (error) {
       next(error);
     }
   };
 
+  /**
+   * Authenticates a user.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
+  loginUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const authResult = await this._authService.login(req.body);
+      res.status(HttpStatus.OK).json(authResult);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Resets a user's password.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
+  resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const resetResult = await this._authService.resetPassword(req.body);
+      res.status(HttpStatus.OK).json(resetResult);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Verifies a user's email.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
+  verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const verificationToken = String(req.params.token);
+      const verificationResult = await this._authService.verifyEmail(verificationToken);
+      res.status(HttpStatus.OK).json(verificationResult);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Triggers a forgot password email.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
+  forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { email } = req.body;
+      const forgotPasswordResult = await this._authService.forgotPassword(email);
+      res.status(HttpStatus.OK).json(forgotPasswordResult);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * Resets password using a verification token.
+   * @param req - Express request object.
+   * @param res - Express response object.
+   * @param next - Express next function.
+   */
   resetPasswordWithToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const token = String(req.params.token);
+      const resetToken = String(req.params.token);
       const { newPassword } = req.body;
-      const data = await this.authService.resetPasswordWithToken(token, newPassword);
-      res.status(HttpStatus.OK).json(data);
-    } catch (error: any) {
-      if (error.message === 'Invalid or expired reset token') {
-        next(new AppError(error.message, HttpStatus.BAD_REQUEST));
-      } else {
-        next(error);
-      }
+      const resetResult = await this._authService.resetPasswordWithToken(resetToken, newPassword);
+      res.status(HttpStatus.OK).json(resetResult);
+    } catch (error) {
+      next(error);
     }
   };
 }
